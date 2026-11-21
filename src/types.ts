@@ -1,7 +1,7 @@
-export type View = 'home' | 'register' | 'target' | 'mediator' | 'admin';
+export type View = 'home' | 'register' | 'target' | 'mediator' | 'admin' | 'error';
 export type RegisterRole = 'host' | 'supporter' | 'contributor';
 export type FeaturedRole = 'host' | 'supporter' | 'contributor';
-export type AdminTab = 'overview' | 'agencies' | 'homepage' | 'mediators' | 'requests';
+export type AdminTab = 'overview' | 'agencies' | 'homepage' | 'mediators' | 'requests' | 'targets' | 'settings';
 export type AccountType = 'normal' | 'pro' | 'vip';
 
 export type Agency = {
@@ -47,6 +47,10 @@ export type Registration = {
   account_type: AccountType;
   is_banned: boolean;
   created_at: string;
+  mediator_id: string | null;
+  activation_date: string | null;
+  expiry_date: string | null;
+  achieved_target: number;
 };
 
 export type VideoLink = {
@@ -72,6 +76,7 @@ export type Mediator = {
   agency_id: string | null;
   commission: string;
   is_active: boolean;
+  password: string | null;
 };
 
 export type AgencyStaff = {
@@ -80,4 +85,11 @@ export type AgencyStaff = {
   name: string;
   role: 'manager' | 'supervisor';
   phone: string;
+};
+
+export type SiteSettings = {
+  admin_username: string;
+  admin_password: string;
+  support_whatsapp: string;
+  support_telegram: string;
 };

@@ -1,5 +1,12 @@
 import type { Agency, FeaturedMember, Mediator, Rate, Registration, Testimonial } from './types';
 
+export const defaultSiteSettings = {
+  admin_username: 'admin',
+  admin_password: 'admin123',
+  support_whatsapp: '',
+  support_telegram: '',
+};
+
 export const countries = [
   { name: 'مصر', code: '+20' },
   { name: 'السعودية', code: '+966' },
@@ -71,12 +78,12 @@ export const defaultTestimonials: Testimonial[] = [
 ];
 
 export const defaultMediators: Mediator[] = [
-  { id: 'med-1', name: 'محمد عبدالله', code: 'SH-MD-2048', agency_id: 'a1', commission: '50%', is_active: true },
-  { id: 'med-2', name: 'سلمى أحمد', code: 'SH-SA-1180', agency_id: 'a2', commission: '25%', is_active: true },
+  { id: 'med-1', name: 'محمد عبدالله', code: 'SH-MD-2048', agency_id: 'a1', commission: '50%', is_active: true, password: null },
+  { id: 'med-2', name: 'سلمى أحمد', code: 'SH-SA-1180', agency_id: 'a2', commission: '25%', is_active: true, password: null },
 ];
 
 export const defaultRegistrations: Registration[] = [
-  { id: 'reg-demo-1', full_name: 'أحمد سامي', role: 'host', country: 'مصر', gender: 'male', phone_code: '+20', phone_number: '01012345678', agency_id: 'a1', status: 'active', app_id: 'APP-001', account_type: 'normal', is_banned: false, created_at: '2026-11-15T10:00:00Z' },
-  { id: 'reg-demo-2', full_name: 'ليان خالد', role: 'supporter', country: 'السعودية', gender: 'female', phone_code: '+966', phone_number: '0501234567', agency_id: 'a1', status: 'active', app_id: 'APP-002', account_type: 'pro', is_banned: false, created_at: '2026-11-16T10:00:00Z' },
-  { id: 'reg-demo-3', full_name: 'خالد نور', role: 'contributor', country: 'الكويت', gender: 'male', phone_code: '+965', phone_number: '99887766', agency_id: 'a2', status: 'pending', app_id: null, account_type: 'normal', is_banned: false, created_at: '2026-11-20T08:00:00Z' },
+  { id: 'reg-demo-1', full_name: 'أحمد سامي', role: 'host', country: 'مصر', gender: 'male', phone_code: '+20', phone_number: '01012345678', agency_id: 'a1', status: 'active', app_id: 'APP-001', account_type: 'normal', is_banned: false, created_at: '2026-11-15T10:00:00Z', mediator_id: 'med-1', activation_date: '2026-11-15T10:00:00Z', expiry_date: '2026-12-15T10:00:00Z', achieved_target: 150000 },
+  { id: 'reg-demo-2', full_name: 'ليان خالد', role: 'supporter', country: 'السعودية', gender: 'female', phone_code: '+966', phone_number: '0501234567', agency_id: 'a1', status: 'active', app_id: 'APP-002', account_type: 'pro', is_banned: false, created_at: '2026-11-16T10:00:00Z', mediator_id: 'med-1', activation_date: '2026-11-16T10:00:00Z', expiry_date: '2026-12-16T10:00:00Z', achieved_target: 50000 },
+  { id: 'reg-demo-3', full_name: 'خالد نور', role: 'contributor', country: 'الكويت', gender: 'male', phone_code: '+965', phone_number: '99887766', agency_id: 'a2', status: 'pending', app_id: null, account_type: 'normal', is_banned: false, created_at: '2026-11-20T08:00:00Z', mediator_id: null, activation_date: null, expiry_date: null, achieved_target: 0 },
 ];
