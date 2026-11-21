@@ -27,7 +27,8 @@ const navItems: { id: View; label: string }[] = [
 
 function getHashView(): View {
   const hash = window.location.hash.replace('#', '').toLowerCase();
-  if (hash === 'admin') return 'admin';
+  const path = window.location.pathname.toLowerCase().replace(/\/+$/, '');
+  if (hash === 'admin' || path.endsWith('/admin') || path === '/admin') return 'admin';
   return 'home';
 }
 
@@ -89,14 +90,15 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const onHashChange = () => {
-      const hashView = getHashView();
-      if (hashView === 'admin') { setView('admin'); setMobileOpen(false); }
-      else if (view === 'admin') { setView('home'); }
+    const sync = () => {
+      const target = getHashView();
+      setView(target);
+      setMobileOpen(false);
     };
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
-  }, [view]);
+    window.addEventListener('hashchange', sync);
+    window.addEventListener('popstate', sync);
+    return () => { window.removeEventListener('hashchange', sync); window.removeEventListener('popstate', sync); };
+  }, []);
 
   const go = (next: View) => {
     if (next === 'admin') {
