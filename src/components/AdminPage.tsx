@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import {
-  ArrowLeft, ArrowRight, Bell, Check, ChevronDown, Copy, Edit3, FileCheck2,
-  LayoutDashboard, Link as LinkIcon, LockKeyhole, Mic2, Plus, Search,
-  ShieldCheck, Star, Target, Trash2, Trophy, Users, Video, WalletCards, X, Youtube,
-  Facebook, Instagram, Ban, CheckCircle,
+  ArrowLeft, ArrowRight, Bell, Copy, Edit3,
+  LayoutDashboard, Link as LinkIcon, Mic2, Plus, Search,
+  ShieldCheck, Star, Trash2, Users, Video, WalletCards, X,
+  Ban, CheckCircle,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type {
@@ -356,11 +356,10 @@ function MediatorDetail({ mediator, agencies, registrations, onBack }: {
 }
 
 // ─── Mediators Admin ──────────────────────────────────────────────────────────
-function MediatorsAdmin({ mediators, setMediators, agencies, registrations, onSelect }: {
+function MediatorsAdmin({ mediators, setMediators, agencies, onSelect }: {
   mediators: Mediator[];
   setMediators: (v: Mediator[]) => void;
   agencies: Agency[];
-  registrations: Registration[];
   onSelect: (id: string) => void;
 }) {
   const [form, setForm] = useState({ name: '', code: '', agency_id: '', commission: '50%' });
@@ -719,7 +718,7 @@ export default function AdminPage(props: Props) {
             {tab === 'mediators' && !selectedMediatorId && (
               <MediatorsAdmin
                 mediators={props.mediators} setMediators={props.setMediators}
-                agencies={props.agencies} registrations={props.registrations}
+                agencies={props.agencies}
                 onSelect={setSelectedMediatorId}
               />
             )}

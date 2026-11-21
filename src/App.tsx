@@ -1,85 +1,28 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  ArrowLeft, ArrowRight, BarChart3, Bell, Check, ChevronDown, Copy, Facebook,
-  FileCheck2, Headphones, Instagram, LayoutDashboard, LockKeyhole,
-  Menu, Mic2, MessageCircle, Play, Plus, Search, ShieldCheck, Sparkles, Star,
-  Target, Trash2, Trophy, Users, WalletCards, X, Youtube, Zap,
+  ArrowLeft, ArrowRight, BarChart3, Check, ChevronDown, Copy, Facebook,
+  FileCheck2, Headphones, Instagram,
+  Menu, Mic2, MessageCircle, Play, Plus, ShieldCheck, Sparkles, Star,
+  Target, Trophy, Users, WalletCards, X, Youtube, Zap,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import AdminPage from '@/components/AdminPage';
+import {
+  countries, faqs, services, defaultRates, defaultAgencies, defaultMembers,
+  defaultTestimonials, defaultMediators, defaultRegistrations,
+} from '@/constants';
+import type {
+  Agency, FeaturedMember, Mediator, Rate, Registration, SocialLink,
+  Testimonial, VideoLink, AgencyStaff, View,
+} from '@/types';
 
-type View = 'home' | 'register' | 'target' | 'mediator' | 'admin';
 type RegisterRole = 'host' | 'supporter' | 'contributor';
-type FeaturedRole = 'host' | 'supporter' | 'contributor';
-type AdminTab = 'overview' | 'agencies' | 'members' | 'mediators' | 'requests';
-
-type Agency = { id: string; name: string; logo_url: string; app_account_code: string; member_count: number };
-type FeaturedMember = { id: string; name: string; role: FeaturedRole; image_url: string | null };
-type Testimonial = { id: string; author_name: string; message: string; role: string | null };
-type Rate = { id: string; target_amount: number; salary_amount: number; label: string };
-type Registration = { id: string; full_name: string; role: RegisterRole; country: string; status: string; created_at: string };
-
 type IconComponent = typeof Users;
 
 const navItems: { id: View; label: string }[] = [
   { id: 'home', label: 'الرئيسية' },
   { id: 'target', label: 'حاسب هدفك' },
   { id: 'mediator', label: 'دخول الوسيط' },
-];
-
-const countries = [
-  { name: 'مصر', code: '+20' }, { name: 'السعودية', code: '+966' }, { name: 'الإمارات', code: '+971' },
-  { name: 'الكويت', code: '+965' }, { name: 'قطر', code: '+974' }, { name: 'البحرين', code: '+973' },
-  { name: 'عمان', code: '+968' }, { name: 'الأردن', code: '+962' }, { name: 'العراق', code: '+964' },
-  { name: 'لبنان', code: '+961' }, { name: 'فلسطين', code: '+970' }, { name: 'المغرب', code: '+212' },
-  { name: 'الجزائر', code: '+213' }, { name: 'تونس', code: '+216' }, { name: 'ليبيا', code: '+218' },
-  { name: 'السودان', code: '+249' }, { name: 'اليمن', code: '+967' }, { name: 'سوريا', code: '+963' },
-  { name: 'تركيا', code: '+90' }, { name: 'الولايات المتحدة', code: '+1' }, { name: 'بريطانيا', code: '+44' },
-];
-
-const faqs = [
-  ['كيف أنضم إلى الوكالة؟', 'سجّل بياناتك من صفحة التسجيل، وسيتواصل معك فريق خدمة العملاء للتأكيد.'],
-  ['ما الفرق بين المضيف والداعم والمساهم؟', 'المضيف يقدم المحتوى ويبني جمهوره داخل الغرف الصوتية، والداعم يساند الغرف ويشارك في نشاطها، والمساهم هو الشخص الذي يشارك في جميع الأنشطة والفعاليات.'],
-  ['ما الذي أحتاجه للتسجيل؟', 'اسمك الثلاثي ورقم هاتفك والدولة والوكالة، وسيضع فريقنا رقم حسابك في التطبيق أثناء التأكيد.'],
-  ['كيف أصبح وسيطاً؟', 'تسجّل معنا كمضيف أو داعم، ثم تقدّم طلباً للإدارة لترقية حسابك إلى وسيط، وبعد الموافقة تنشئ كلمة مرورك وتختار نسبة العمولة المناسبة لك.'],
-  ['متى هو موعد تلقي الراتب؟', 'تتم احتساب التارجت كل 15 يوماً: تبدأ الفترة الأولى من يوم 1 في الشهر وتنتهي يوم 15، وتبدأ الفترة التالية من يوم 16 حتى نهاية الشهر.'],
-  ['كم يستغرق سحب الأرباح؟', 'تتم معالجة طلب السحب خلال 3 إلى 5 أيام عمل.'],
-  ['كيف أتواصل مع خدمة العملاء أو الدعم الفني؟', 'يمكنك إرسال شكواك أو استفسارك في أي وقت عبر تيليجرام أو واتساب، وسيتم تحويلك مباشرة إلى الإدارة لحلها في أسرع وقت.'],
-  ['هل بياناتي الشخصية وأرقام هواتفي آمنة؟', 'نعم، نولي خصوصية بيانات الأعضاء اهتماماً بالغاً، ولا تتم مشاركة أي معلومات شخصية أو أرقام هواتف مع أي طرف خارجي.'],
-  ['ما هي مزايا الحسابات VIP والاحترافي والعادي؟', 'كلما ارتقى حسابك لدينا زادت المزايا، ويتمتع المضيفون والداعمون والوسطاء المتميزون بمزايا أعلى.'],
-];
-
-const services: { icon: IconComponent; title: string; detail: string; number: string }[] = [
-  { icon: Sparkles, number: '01', title: 'من نحن؟', detail: 'نحن أول شركة في الشرق الأوسط في هذا المجال، وندير أكبر شبكة وكالات تضم وكالات لايف ووكالات صوتية.' },
-  { icon: Zap, number: '02', title: 'تطوير المضيفين', detail: 'نرافق المضيفين من أول يوم بتدريب مستمر وخطط نمو واضحة ومتابعة يومية لتحسين الأداء.' },
-  { icon: Users, number: '03', title: 'شبكة الداعمين', detail: 'مجتمع من الداعمين النشطين يمنح الغرف الصوتية حيوية وتفاعلاً مستمراً.' },
-  { icon: WalletCards, number: '04', title: 'برنامج الوسطاء', detail: 'فرص ربح واضحة للوسطاء مع نسب عمولة مرنة وتقارير شفافة لكل تارجت.' },
-  { icon: ShieldCheck, number: '05', title: 'الدعم والأمان', detail: 'فريق خدمة عملاء متاح لمتابعة طلباتك وشكاواك بسرعة وسرية تامة.' },
-  { icon: Trophy, number: '06', title: 'مساحة للتطور', detail: 'مسار واضح يربط بين الحضور، الإنجاز، الترقية، والمكافآت داخل مجتمعنا.' },
-];
-
-const defaultRates: Rate[] = [
-  { id: 'rate-1', target_amount: 50000, salary_amount: 250, label: 'البداية' },
-  { id: 'rate-2', target_amount: 150000, salary_amount: 750, label: 'المستوى البرونزي' },
-  { id: 'rate-3', target_amount: 300000, salary_amount: 1500, label: 'المستوى الفضي' },
-  { id: 'rate-4', target_amount: 600000, salary_amount: 3000, label: 'المستوى الذهبي' },
-];
-
-const defaultAgencies: Agency[] = [
-  { id: 'a1', name: 'Shadow Voice', logo_url: '', app_account_code: 'SH-1024', member_count: 328 },
-  { id: 'a2', name: 'Luna Live', logo_url: '', app_account_code: 'LN-2208', member_count: 241 },
-  { id: 'a3', name: 'NOVA Community', logo_url: '', app_account_code: 'NV-8819', member_count: 196 },
-];
-
-const defaultMembers: FeaturedMember[] = [
-  { id: 'm1', name: 'سارة محمد', role: 'host', image_url: null },
-  { id: 'm2', name: 'عمر خالد', role: 'supporter', image_url: null },
-  { id: 'm3', name: 'ليان أحمد', role: 'contributor', image_url: null },
-];
-
-const defaultTestimonials: Testimonial[] = [
-  { id: 't1', author_name: 'نور الهدى', role: 'مضيفة', message: 'من أول أسبوع حسّيت إن في فريق حقيقي واقف معي. التدريب والمتابعة فرقوا معي كثير.' },
-  { id: 't2', author_name: 'محمد علي', role: 'وسيط', message: 'التقارير واضحة والعمولات منظمة، والأهم أن التواصل مع الإدارة سريع ومحترم.' },
-  { id: 't3', author_name: 'ريم', role: 'داعمة', message: 'المجتمع هنا مختلف، فيه طاقة جميلة ومساحة للجميع حتى يشارك ويكبر.' },
 ];
 
 function App() {
@@ -89,24 +32,36 @@ function App() {
   const [members, setMembers] = useState<FeaturedMember[]>(defaultMembers);
   const [testimonials, setTestimonials] = useState<Testimonial[]>(defaultTestimonials);
   const [rates, setRates] = useState<Rate[]>(defaultRates);
+  const [mediators, setMediators] = useState<Mediator[]>(defaultMediators);
+  const [agencyStaff, setAgencyStaff] = useState<AgencyStaff[]>([]);
+  const [videoLinks, setVideoLinks] = useState<VideoLink[]>([]);
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [registrations, setRegistrations] = useState<Registration[]>(defaultRegistrations);
 
   useEffect(() => {
     let active = true;
     async function loadPublicContent() {
       if (!supabase) return;
-      const [agencyResult, memberResult, testimonialResult, ratesResult] = await Promise.all([
+      const [agencyResult, memberResult, testimonialResult, ratesResult, medResult, videoResult, socialResult, regResult] = await Promise.all([
         supabase.from('agencies').select('id,name,logo_url,app_account_code,member_count').eq('is_active', true),
         supabase.from('featured_members').select('id,name,role,image_url').eq('is_published', true),
         supabase.from('testimonials').select('id,author_name,message,role').eq('is_published', true),
         supabase.from('target_rates').select('id,target_amount,salary_amount,label').eq('is_active', true).order('sort_order'),
+        supabase.from('mediators').select('id,name,code,agency_id,commission,is_active').eq('is_active', true),
+        supabase.from('video_links').select('id,title,url,is_published,sort_order').eq('is_published', true).order('sort_order'),
+        supabase.from('social_links').select('id,platform,url,label,sort_order').eq('is_active', true).order('sort_order'),
+        supabase.from('registrations').select('id,full_name,role,country,gender,phone_code,phone_number,agency_id,status,app_id,account_type,is_banned,created_at').order('created_at', { ascending: false }),
       ]);
       if (!active) return;
       if (agencyResult.data?.length) setAgencies(agencyResult.data as Agency[]);
       if (memberResult.data?.length) setMembers(memberResult.data as FeaturedMember[]);
       if (testimonialResult.data?.length) setTestimonials(testimonialResult.data as Testimonial[]);
       if (ratesResult.data?.length) setRates(ratesResult.data as Rate[]);
+      if (medResult.data?.length) setMediators(medResult.data as Mediator[]);
+      if (videoResult.data?.length) setVideoLinks(videoResult.data as VideoLink[]);
+      if (socialResult.data?.length) setSocialLinks(socialResult.data as SocialLink[]);
+      if (regResult.data?.length) setRegistrations(regResult.data as Registration[]);
     }
     void loadPublicContent();
     return () => { active = false; };
@@ -125,7 +80,19 @@ function App() {
       {view === 'register' && <RegisterPage agencies={agencies} onNavigate={go} onSubmitted={(registration) => setRegistrations((current) => [registration, ...current])} />}
       {view === 'target' && <TargetPage rates={rates} onNavigate={go} />}
       {view === 'mediator' && <MediatorPage onNavigate={go} />}
-      {view === 'admin' && <AdminPage isAdmin={isAdmin} setIsAdmin={setIsAdmin} agencies={agencies} setAgencies={setAgencies} members={members} setMembers={setMembers} registrations={registrations} setRegistrations={setRegistrations} />}
+      {view === 'admin' && (
+        <AdminPage
+          isAdmin={isAdmin} setIsAdmin={setIsAdmin}
+          agencies={agencies} setAgencies={setAgencies}
+          members={members} setMembers={setMembers}
+          testimonials={testimonials} setTestimonials={setTestimonials}
+          registrations={registrations} setRegistrations={setRegistrations}
+          videoLinks={videoLinks} setVideoLinks={setVideoLinks}
+          socialLinks={socialLinks} setSocialLinks={setSocialLinks}
+          mediators={mediators} setMediators={setMediators}
+          agencyStaff={agencyStaff} setAgencyStaff={setAgencyStaff}
+        />
+      )}
       <Footer onNavigate={go} />
     </div>
   );
@@ -152,6 +119,7 @@ function Header({ view, onNavigate, mobileOpen, setMobileOpen }: { view: View; o
 }
 
 function HomePage({ onNavigate, agencies, members, testimonials }: { onNavigate: (view: View) => void; agencies: Agency[]; members: FeaturedMember[]; testimonials: Testimonial[] }) {
+  const servicesWithIcons = services.map((s) => ({ ...s, icon: iconForService(s.number) }));
   return <main>
     <section className="noise relative overflow-hidden border-b border-white/[.05] bg-[#0b0e13]">
       <div className="glow-a -left-40 top-24" /><div className="glow-b right-[35%] top-[-150px]" /><div className="grid-overlay absolute inset-0 opacity-60" />
@@ -176,7 +144,7 @@ function HomePage({ onNavigate, agencies, members, testimonials }: { onNavigate:
         </div>
       </div>
     </section>
-    <section id="services" className="section-space bg-[#0d1015]"><div className="container-wide"><div className="text-center"><div className="section-eyebrow">لماذا Shadow؟</div><h2 className="section-title">ما الذي نقدمه لك؟</h2><p className="section-copy">مساحتك الآمنة للنمو، التواصل، وتحويل حضورك اليومي إلى مسيرة حقيقية.</p></div><div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{services.map((service) => <ServiceCard key={service.number} {...service} />)}</div></div></section>
+    <section id="services" className="section-space bg-[#0d1015]"><div className="container-wide"><div className="text-center"><div className="section-eyebrow">لماذا Shadow؟</div><h2 className="section-title">ما الذي نقدمه لك؟</h2><p className="section-copy">مساحتك الآمنة للنمو، التواصل، وتحويل حضورك اليومي إلى مسيرة حقيقية.</p></div><div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{servicesWithIcons.map((service) => <ServiceCard key={service.number} icon={service.icon} number={service.number} title={service.title} detail={service.detail} />)}</div></div></section>
     <StatsStrip />
     <section className="section-space bg-[#0d1015]"><div className="container-wide"><div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><div className="section-eyebrow">الأشخاص الذين يصنعون الفرق</div><h2 className="section-title !text-4xl">نجوم مجتمعنا</h2></div><p className="max-w-sm text-sm leading-7 text-[#90949b]">أصوات وداعمين ومساهمين يضيفون كل يوم شيئاً جديداً إلى هذه المساحة.</p></div><div className="mt-10 grid gap-4 sm:grid-cols-3">{members.map((member) => <MemberCard key={member.id} member={member} />)}</div></div></section>
     <section className="section-space border-y border-white/[.05] bg-[#0a0d12]"><div className="container-wide"><div className="text-center"><div className="section-eyebrow">شركاء النجاح</div><h2 className="section-title !text-4xl">أقوى الوكالات</h2></div><div className="mt-10 grid gap-4 sm:grid-cols-3">{agencies.map((agency) => <AgencyCard key={agency.id} agency={agency} />)}</div></div></section>
@@ -184,6 +152,11 @@ function HomePage({ onNavigate, agencies, members, testimonials }: { onNavigate:
     <FAQ />
     <section className="relative overflow-hidden bg-[#17120f] py-20"><div className="glow-b -left-20 top-0" /><div className="container-wide relative flex flex-col items-center justify-between gap-8 text-center md:flex-row md:text-right"><div><div className="section-eyebrow">خطوتك التالية تبدأ هنا</div><h2 className="mt-3 text-3xl font-black text-[#fff4e8] md:text-4xl">جاهز تطلق صوتك؟</h2><p className="mt-3 text-[#b6a89e]">انضم إلى مجتمع يقدّر حضورك ويؤمن بإمكانياتك.</p></div><button onClick={() => onNavigate('register')} className="button-primary !px-8">سجّل الآن <ArrowLeft size={18} /></button></div></section>
   </main>;
+}
+
+function iconForService(number: string): IconComponent {
+  const map: Record<string, IconComponent> = { '01': Sparkles, '02': Zap, '03': Users, '04': WalletCards, '05': ShieldCheck, '06': Trophy };
+  return map[number] ?? Sparkles;
 }
 
 function Stat({ value, label }: { value: string; label: string }) { return <div className="text-center"><div className="text-3xl font-black text-[#f4a56b]">{value}</div><div className="mt-1 text-xs text-[#8b8d92]">{label}</div></div>; }
@@ -207,7 +180,7 @@ function RegisterPage({ agencies, onNavigate, onSubmitted }: { agencies: Agency[
       const { error } = await supabase.from('registrations').insert({ full_name: form.fullName, gender: form.gender, country: country.name, phone_code: country.code, phone_number: form.phone, role, talent: role === 'host' ? form.talent : null, discovery_source: form.source, referral_code: role === 'host' ? form.referral : null, agency_id: form.agency || null });
       if (error) { console.error('registration submission failed', error); setStatus('error'); return; }
     }
-    onSubmitted({ id: `registration-${Date.now()}`, full_name: form.fullName, role, country: country.name, status: 'pending', created_at: new Date().toISOString() });
+    onSubmitted({ id: `registration-${Date.now()}`, full_name: form.fullName, role, country: country.name, gender: form.gender, phone_code: country.code, phone_number: form.phone, agency_id: form.agency || null, status: 'pending', app_id: null, account_type: 'normal', is_banned: false, created_at: new Date().toISOString() });
     setStatus('success');
   };
   if (status === 'success') return <main className="min-h-[700px] bg-[#0b0e13] py-24"><div className="container-wide flex max-w-xl flex-col items-center text-center"><div className="flex h-20 w-20 items-center justify-center rounded-full border border-[#67c7aa]/30 bg-[#67c7aa]/10 text-[#67c7aa]"><Check size={36} /></div><div className="section-eyebrow mt-7">تم استلام طلبك</div><h1 className="section-title mt-3 !text-4xl">أهلاً بك في مجتمع Shadow</h1><p className="mt-5 leading-8 text-[#a6a9ae]">وصلت بياناتك بنجاح. سيتواصل معك فريق خدمة العملاء قريباً لتأكيد الطلب والخطوة التالية.</p><button onClick={() => onNavigate('home')} className="button-primary mt-8">العودة للرئيسية <ArrowRight size={17} /></button></div></main>;
@@ -236,27 +209,6 @@ function MediatorPage({ onNavigate }: { onNavigate: (view: View) => void }) {
 
 function MediatorDashboard({ onNavigate }: { onNavigate: (view: View) => void }) { const invited = [{ name: 'سارة محمد', status: 'نشط', joined: '01 / 11 / 2026', target: '300,000' }, { name: 'أحمد حسن', status: 'نشط', joined: '16 / 11 / 2026', target: '150,000' }, { name: 'مريم علي', status: 'معلق', joined: '20 / 11 / 2026', target: '—' }]; return <main className="min-h-[700px] bg-[#0b0e13] py-12"><div className="container-wide"><div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end"><div><div className="section-eyebrow">لوحة الوسيط</div><h1 className="section-title !text-4xl">أهلاً، محمد عبدالله</h1><p className="mt-2 text-sm text-[#858b92]">آخر تحديث للبيانات: اليوم، 10:42 ص</p></div><button onClick={() => onNavigate('home')} className="button-outline !px-4 !py-2.5">خروج <ArrowRight size={16} /></button></div><div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><DashboardStat icon={Users} label="المضيفون المدعوون" value="24" /><DashboardStat icon={Check} label="النشطون" value="21" /><DashboardStat icon={WalletCards} label="نسبة العمولة" value="50%" /><DashboardStat icon={Trophy} label="التارجت الحالي" value="1.2M" /></div><div className="mt-8 grid gap-5 lg:grid-cols-[1.4fr_.6fr]"><div className="rounded-2xl border border-white/[.08] bg-[#11141a] p-5"><div className="mb-5 flex items-center justify-between"><div><h2 className="m-0 text-lg font-black">المضيفون الذين دعوتهم</h2><p className="m-0 mt-1 text-xs text-[#81878f]">تابع حالة كل حساب وتقدمه</p></div><button className="button-outline !px-3 !py-2 text-xs"><Plus size={14} />إضافة مضيف</button></div><div className="overflow-x-auto"><table className="w-full min-w-[620px] text-right text-sm"><thead><tr className="border-b border-white/10 text-xs text-[#737981]"><th className="pb-3 font-medium">المضيف</th><th className="pb-3 font-medium">الحالة</th><th className="pb-3 font-medium">تاريخ الانضمام</th><th className="pb-3 font-medium">التارجت المحقق</th></tr></thead><tbody>{invited.map((item) => <tr key={item.name} className="border-b border-white/[.06] last:border-0"><td className="py-4 font-bold text-[#ece9e4]">{item.name}</td><td className="py-4"><span className={`rounded-full px-3 py-1 text-[11px] ${item.status === 'نشط' ? 'bg-[#5fc3a5]/10 text-[#70cfb1]' : 'bg-[#ee9e65]/10 text-[#efa46d]'}`}>{item.status}</span></td><td className="py-4 text-xs text-[#9599a0]">{item.joined}</td><td className="py-4 text-xs text-[#efab75]">{item.target}</td></tr>)}</tbody></table></div></div><div className="rounded-2xl border border-[#59412f] bg-[linear-gradient(145deg,#211813,#13161b)] p-6"><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#ef9f65]/15 text-[#efa36b]"><Copy size={20} /></div><h3 className="mt-6 text-xl font-black">كود الدعوة الخاص بك</h3><p className="mt-2 text-sm leading-7 text-[#aaa09a]">شارك هذا الكود مع المضيفين الجدد ليظهروا تلقائياً في لوحتك.</p><div className="mt-6 flex items-center justify-between rounded-xl border border-[#775238] bg-[#0f1115] px-4 py-3"><span className="font-mono text-lg font-bold tracking-widest text-[#f3b47f]">SH-MD-2048</span><Copy size={16} className="text-[#c7794b]" /></div></div></div></div></main>; }
 function DashboardStat({ icon: Icon, label, value }: { icon: IconComponent; label: string; value: string }) { return <div className="rounded-2xl border border-white/[.08] bg-[#11141a] p-5"><div className="flex items-center justify-between"><span className="text-xs text-[#858b92]">{label}</span><Icon size={18} className="text-[#ec9e65]" /></div><div className="mt-5 text-3xl font-black text-[#f1ede7]">{value}</div></div>; }
-
-function AdminPage({ isAdmin, setIsAdmin, agencies, setAgencies, members, setMembers, registrations, setRegistrations }: { isAdmin: boolean; setIsAdmin: (value: boolean) => void; agencies: Agency[]; setAgencies: (value: Agency[]) => void; members: FeaturedMember[]; setMembers: (value: FeaturedMember[]) => void; registrations: Registration[]; setRegistrations: (value: Registration[]) => void }) {
-  const [tab, setTab] = useState<AdminTab>('overview');
-  const [query, setQuery] = useState('');
-  const [login, setLogin] = useState({ username: '', password: '' });
-  const [loginError, setLoginError] = useState(false);
-  const [newAgency, setNewAgency] = useState({ name: '', code: '' });
-  const [newMember, setNewMember] = useState({ name: '', role: 'host' as FeaturedRole });
-  if (!isAdmin) return <main className="min-h-[700px] bg-[#0b0e13] py-24"><div className="mx-auto max-w-md px-5"><div className="mb-8 text-center"><div className="mx-auto h-16 w-16 overflow-hidden rounded-2xl border border-[#8b654b] bg-[#30231b]"><img src="/0a3e789f-716c-4251-9569-7f98ecab5ee9.jpg" alt="شعار Shadow Agencies Community" className="h-full w-full object-cover" /></div><div className="section-eyebrow mt-6">بوابة الإدارة</div><h1 className="section-title mt-2 !text-4xl">دخول آمن</h1><p className="mt-3 text-sm text-[#858b92]">إدارة المحتوى والطلبات والوكالات</p></div><form onSubmit={(event) => { event.preventDefault(); if (login.username === 'admin' && login.password === 'admin123') { setIsAdmin(true); setLoginError(false); } else setLoginError(true); }} className="rounded-3xl border border-white/10 bg-[#12151b] p-7"><label className="field-label">اسم المستخدم</label><input value={login.username} onChange={(e) => setLogin({ ...login, username: e.target.value })} className="input-field" dir="ltr" placeholder="admin" /><label className="field-label mt-5">كلمة المرور</label><input value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} type="password" className="input-field" dir="ltr" placeholder="••••••••" />{loginError && <p className="mt-4 text-sm text-[#ed9085]">بيانات الدخول غير صحيحة.</p>}<button className="button-primary mt-7 w-full">دخول الإدارة <ArrowLeft size={17} /></button></form></div></main>;
-  const filteredAgencies = agencies.filter((item) => item.name.toLowerCase().includes(query.toLowerCase()));
-  const removeAgency = (id: string) => setAgencies(agencies.filter((item) => item.id !== id));
-  const removeMember = (id: string) => setMembers(members.filter((item) => item.id !== id));
-  const addAgency = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); if (!newAgency.name) return; setAgencies([...agencies, { id: `agency-${Date.now()}`, name: newAgency.name, logo_url: '', app_account_code: newAgency.code || 'NEW-0000', member_count: 0 }]); setNewAgency({ name: '', code: '' }); };
-  const addMember = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); if (!newMember.name) return; setMembers([...members, { id: `member-${Date.now()}`, name: newMember.name, role: newMember.role, image_url: null }]); setNewMember({ name: '', role: 'host' }); };
-  return <main className="min-h-[700px] bg-[#0b0e13] py-10"><div className="container-wide"><div className="flex flex-col justify-between gap-5 md:flex-row md:items-center"><div><div className="section-eyebrow">Shadow control center</div><h1 className="section-title !text-4xl">لوحة الإدارة</h1></div><button onClick={() => setIsAdmin(false)} className="button-outline !px-4 !py-2.5">تسجيل الخروج <ArrowRight size={16} /></button></div><div className="mt-8 grid gap-6 lg:grid-cols-[220px_1fr]"><aside className="h-fit rounded-2xl border border-white/[.08] bg-[#11141a] p-3"><div className="mb-4 flex items-center gap-3 border-b border-white/[.08] px-3 pb-4"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#ed9e65]/15 text-[#ed9e65]"><ShieldCheck size={19} /></div><div><p className="m-0 text-sm font-bold">Admin</p><p className="m-0 text-[10px] text-[#7e858c]">مسؤول النظام</p></div></div>{([['overview', 'النظرة العامة', LayoutDashboard], ['agencies', 'الوكالات', Users], ['members', 'الحسابات المميزة', Star], ['mediators', 'الوسطاء', WalletCards], ['requests', 'الطلبات المعلقة', Bell]] as const).map(([id, label, Icon]) => <button key={id} onClick={() => setTab(id)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-right text-sm font-bold transition ${tab === id ? 'bg-[#ed9e65] text-[#19120f]' : 'text-[#969ba2] hover:bg-white/5 hover:text-white'}`}><Icon size={17} />{label}{id === 'requests' && <span className="mr-auto rounded-full bg-[#ed9e65]/15 px-2 py-0.5 text-[10px] text-[#f1a36e]">4</span>}</button>)}</aside><section>{tab === 'overview' && <AdminOverview agencies={agencies} members={members} registrations={registrations} />}{tab === 'agencies' && <div className="space-y-5"><AdminSectionTitle title="إدارة الوكالات" description="أنشئ وعدّل بيانات الوكالات الظاهرة في الموقع." /><form onSubmit={addAgency} className="grid gap-3 rounded-2xl border border-[#60432f] bg-[#1c1512] p-4 md:grid-cols-[1fr_1fr_auto]"><input value={newAgency.name} onChange={(e) => setNewAgency({ ...newAgency, name: e.target.value })} className="input-field" placeholder="اسم الوكالة" /><input value={newAgency.code} onChange={(e) => setNewAgency({ ...newAgency, code: e.target.value })} className="input-field" placeholder="رقم حساب الوكالة" /><button className="button-primary"><Plus size={16} />إضافة وكالة</button></form><div className="grid gap-3">{filteredAgencies.map((agency) => <div key={agency.id} className="flex items-center gap-4 rounded-2xl border border-white/[.08] bg-[#11141a] p-4"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#2d211b] font-black text-[#eea169]">{agency.name.slice(0, 1)}</div><div className="min-w-0 flex-1"><p className="m-0 font-bold">{agency.name}</p><p className="m-0 mt-1 text-xs text-[#858b92]">{agency.app_account_code} · {agency.member_count} عضو</p></div><button onClick={() => removeAgency(agency.id)} className="rounded-lg p-2 text-[#9b6260] hover:bg-[#9d4b49]/10" aria-label={`حذف ${agency.name}`}><Trash2 size={17} /></button></div>)}</div></div>}{tab === 'members' && <div className="space-y-5"><AdminSectionTitle title="الحسابات المميزة" description="أضف النجوم الظاهرة في قسم المجتمع أو احذفها." /><form onSubmit={addMember} className="grid gap-3 rounded-2xl border border-[#60432f] bg-[#1c1512] p-4 md:grid-cols-[1fr_1fr_auto]"><input value={newMember.name} onChange={(e) => setNewMember({ ...newMember, name: e.target.value })} className="input-field" placeholder="اسم العضو" /><select value={newMember.role} onChange={(e) => setNewMember({ ...newMember, role: e.target.value as FeaturedRole })} className="input-field"><option value="host">مضيف</option><option value="supporter">داعم</option><option value="contributor">مساهم</option></select><button className="button-primary"><Plus size={16} />إضافة عضو</button></form><div className="grid gap-3 sm:grid-cols-2">{members.map((member) => <div key={member.id} className="flex items-center gap-3 rounded-2xl border border-white/[.08] bg-[#11141a] p-4"><div className="h-12 w-12 rounded-xl bg-[radial-gradient(circle_at_50%_30%,#9d6347,#28282d)]" /><div className="flex-1"><p className="m-0 font-bold">{member.name}</p><p className="m-0 mt-1 text-xs text-[#858b92]">{member.role === 'host' ? 'مضيف' : member.role === 'supporter' ? 'داعم' : 'مساهم'}</p></div><button onClick={() => removeMember(member.id)} className="rounded-lg p-2 text-[#9b6260] hover:bg-[#9d4b49]/10"><Trash2 size={17} /></button></div>)}</div></div>}{tab === 'mediators' && <MediatorAdmin />}{tab === 'requests' && <RequestAdmin registrations={registrations} setRegistrations={setRegistrations} query={query} setQuery={setQuery} />}</section></div></div></main>;
-}
-
-function AdminOverview({ agencies, members, registrations }: { agencies: Agency[]; members: FeaturedMember[]; registrations: Registration[] }) { const cards = [[agencies.length, 'الوكالات', Users], [6019, 'المضيفون', Mic2], [3252, 'الداعمون', Headphones], [members.length, 'المساهمون', Star], [24, 'الوسطاء', WalletCards], [registrations.length || 4, 'الطلبات المعلقة', Bell]] as const; return <div><AdminSectionTitle title="النظرة العامة" description="صورة سريعة عن أداء مجتمع Shadow." /><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{cards.map(([value, label, Icon]) => <div key={label} className="rounded-2xl border border-white/[.08] bg-[#11141a] p-5"><div className="flex items-center justify-between"><span className="text-xs text-[#858b92]">{label}</span><Icon size={18} className="text-[#ec9e65]" /></div><p className="m-0 mt-4 text-3xl font-black">{value.toLocaleString('en-US')}+</p><div className="mt-4 h-1 overflow-hidden rounded-full bg-[#252a31]"><div className="h-full w-2/3 rounded-full bg-[#e9955e]" /></div></div>)}</div><div className="mt-5 rounded-2xl border border-white/[.08] bg-[#11141a] p-5"><div className="flex items-center justify-between"><h3 className="m-0 font-bold">حالة النظام</h3><span className="flex items-center gap-2 text-xs text-[#6bc7aa]"><span className="h-2 w-2 rounded-full bg-[#6bc7aa]" />كل الأنظمة تعمل</span></div><div className="mt-5 grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-[#0d1015] p-4"><p className="m-0 text-xs text-[#858b92]">الأمان</p><p className="m-0 mt-2 font-bold text-[#70cbaa]">محمي</p></div><div className="rounded-xl bg-[#0d1015] p-4"><p className="m-0 text-xs text-[#858b92]">الطلبات</p><p className="m-0 mt-2 font-bold text-[#eea269]">تحتاج مراجعة</p></div><div className="rounded-xl bg-[#0d1015] p-4"><p className="m-0 text-xs text-[#858b92]">آخر نسخة احتياطية</p><p className="m-0 mt-2 font-bold">اليوم، 03:00 ص</p></div></div></div></div>; }
-function AdminSectionTitle({ title, description }: { title: string; description: string }) { return <div className="mb-5"><h2 className="m-0 text-2xl font-black">{title}</h2><p className="m-0 mt-2 text-sm text-[#858b92]">{description}</p></div>; }
-function MediatorAdmin() { const list = [{ name: 'محمد عبدالله', code: 'SH-MD-2048', invited: 24, commission: '50%' }, { name: 'سلمى أحمد', code: 'SH-SA-1180', invited: 12, commission: '25%' }]; return <div><AdminSectionTitle title="الوسطاء" description="راجع الوسطاء ونسب العمولة والحسابات المدعوة." /><div className="grid gap-3">{list.map((item) => <div key={item.code} className="flex flex-col justify-between gap-4 rounded-2xl border border-white/[.08] bg-[#11141a] p-5 sm:flex-row sm:items-center"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#2e211b] text-[#eea069]"><WalletCards size={18} /></div><div><p className="m-0 font-bold">{item.name}</p><p className="m-0 mt-1 font-mono text-xs text-[#858b92]">{item.code}</p></div></div><div className="flex items-center gap-6 text-sm"><span className="text-[#a2a5aa]">{item.invited} مدعو</span><span className="font-bold text-[#eea269]">{item.commission}</span><button className="button-outline !px-3 !py-2 text-xs">تعديل</button></div></div>)}</div></div>; }
-function RequestAdmin({ registrations, setRegistrations, query, setQuery }: { registrations: Registration[]; setRegistrations: (value: Registration[]) => void; query: string; setQuery: (value: string) => void }) { const list = registrations.length ? registrations : [{ id: 'demo-1', full_name: 'أحمد سامي', role: 'host' as RegisterRole, country: 'مصر', status: 'pending', created_at: '2026-11-20' }, { id: 'demo-2', full_name: 'ليان خالد', role: 'supporter' as RegisterRole, country: 'السعودية', status: 'pending', created_at: '2026-11-19' }]; const filtered = list.filter((item) => item.full_name.includes(query)); const approve = (id: string) => setRegistrations(registrations.map((item) => item.id === id ? { ...item, status: 'active' } : item)); return <div><AdminSectionTitle title="الطلبات المعلقة" description="راجع طلبات الانضمام وفعّل الحسابات الجديدة." /><div className="relative mb-5"><Search size={17} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#737983]" /><input value={query} onChange={(e) => setQuery(e.target.value)} className="input-field pr-11" placeholder="ابحث بالاسم..." /></div><div className="overflow-x-auto rounded-2xl border border-white/[.08] bg-[#11141a]"><table className="w-full min-w-[640px] text-right text-sm"><thead><tr className="border-b border-white/10 text-xs text-[#737981]"><th className="p-4">الاسم</th><th className="p-4">النوع</th><th className="p-4">الدولة</th><th className="p-4">الحالة</th><th className="p-4">الإجراء</th></tr></thead><tbody>{filtered.map((item) => <tr key={item.id} className="border-b border-white/[.06] last:border-0"><td className="p-4 font-bold">{item.full_name}</td><td className="p-4 text-xs text-[#9ca0a5]">{item.role === 'host' ? 'مضيف' : item.role === 'supporter' ? 'داعم' : 'مساهم'}</td><td className="p-4 text-xs text-[#9ca0a5]">{item.country}</td><td className="p-4"><span className="rounded-full bg-[#ee9e65]/10 px-3 py-1 text-xs text-[#efa36d]">{item.status === 'active' ? 'نشط' : 'معلق'}</span></td><td className="p-4"><button onClick={() => approve(item.id)} className="button-outline !px-3 !py-2 text-xs">تفعيل</button></td></tr>)}</tbody></table></div></div>; }
 
 function Footer({ onNavigate }: { onNavigate: (view: View) => void }) { return <footer className="border-t border-white/[.08] bg-[#090b0f] py-12"><div className="container-wide"><div className="flex flex-col justify-between gap-10 md:flex-row"><div><button onClick={() => onNavigate('home')} className="flex items-center gap-3"><div className="h-10 w-10 overflow-hidden rounded-xl border border-[#76573e] bg-[#2c211b]"><img src="/0a3e789f-716c-4251-9569-7f98ecab5ee9.jpg" alt="شعار Shadow Agencies Community" className="h-full w-full object-cover" /></div><div className="text-right"><div className="text-[11px] font-black tracking-[.2em]">SHADOW</div><div className="text-[8px] font-bold tracking-[.2em] text-[#a26b48]">AGENCIES COMMUNITY</div></div></button><p className="mt-5 max-w-xs text-sm leading-7 text-[#81868d]">أطلق صوتك، ابنِ مجتمعك، وكن جزءاً من شبكة تؤمن بما تستطيع أن تصنعه.</p></div><div className="flex flex-wrap gap-10"><div><p className="mb-4 text-xs font-bold text-[#f0ece6]">استكشف</p><button onClick={() => onNavigate('home')} className="block py-1 text-sm text-[#81868d] hover:text-[#eea269]">الرئيسية</button><button onClick={() => onNavigate('target')} className="block py-1 text-sm text-[#81868d] hover:text-[#eea269]">حاسب هدفك</button><button onClick={() => onNavigate('mediator')} className="block py-1 text-sm text-[#81868d] hover:text-[#eea269]">دخول الوسيط</button><button onClick={() => onNavigate('admin')} className="block py-1 text-sm text-[#81868d] hover:text-[#eea269]">بوابة الإدارة</button></div><div><p className="mb-4 text-xs font-bold text-[#f0ece6]">تابعنا</p><div className="flex gap-2"><a href="#facebook" className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-[#aeb1b5] hover:border-[#eea269] hover:text-[#eea269]" aria-label="فيسبوك"><Facebook size={16} /></a><a href="#youtube" className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-[#aeb1b5] hover:border-[#eea269] hover:text-[#eea269]" aria-label="يوتيوب"><Youtube size={16} /></a><a href="#instagram" className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-[#aeb1b5] hover:border-[#eea269] hover:text-[#eea269]" aria-label="إنستغرام"><Instagram size={16} /></a></div></div></div></div><div className="mt-10 flex flex-col justify-between gap-3 border-t border-white/[.07] pt-5 text-xs text-[#656b73] sm:flex-row"><span>© 2026 Shadow Agencies Community</span><span className="flex items-center gap-2"><ShieldCheck size={14} className="text-[#69c6aa]" />خصوصيتك وأمانك أولويتنا</span></div></div></footer>; }
 
