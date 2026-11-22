@@ -117,7 +117,7 @@ function App() {
     <div className="page-shell" dir="rtl">
       <Header view={view} onNavigate={go} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
       {view === 'home' && <HomePage onNavigate={go} agencies={agencies} members={members} testimonials={testimonials} videoLinks={videoLinks} socialLinks={socialLinks} supportWhatsapp={siteSettings.support_whatsapp} supportTelegram={siteSettings.support_telegram} />}
-      {view === 'register' && <RegisterPage agencies={agencies} onNavigate={go} onSubmitted={(registration) => setRegistrations((current) => [registration, ...current])} />}
+      {view === 'register' && <RegisterPage agencies={agencies} mediators={mediators} onNavigate={go} onSubmitted={(registration) => setRegistrations((current) => [registration, ...current])} />}
       {view === 'target' && <TargetPage rates={rates} onNavigate={go} />}
       {view === 'mediator' && <MediatorPage onNavigate={go} mediators={mediators} agencies={agencies} registrations={registrations} />}
       {view === 'admin' && (
@@ -169,7 +169,7 @@ function HomePage({ onNavigate, agencies, members, testimonials, videoLinks, sup
 }) {
   const servicesWithIcons = services.map((s) => ({ ...s, icon: iconForService(s.number) }));
   return <main>
-    <section className="noise relative overflow-hidden border-b border-white/[.05] bg-[#0b0e13]">
+    <section className="noise relative overflow-hidden border-b border-white/[.05] bg-[#0b0e13]" style={{ backgroundImage: 'url(/pexels-photo-23384400.avif)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundBlendMode: 'overlay' }}>
       <div className="glow-a -left-40 top-24" /><div className="glow-b right-[35%] top-[-150px]" /><div className="grid-overlay absolute inset-0 opacity-60" />
       <div className="container-wide relative grid min-h-[665px] items-center gap-14 py-20 lg:grid-cols-[1fr_390px] lg:gap-16 lg:py-24">
         <div className="reveal max-w-[690px] text-right">
@@ -234,7 +234,7 @@ function VideoCard({ video }: { video: VideoLink }) {
 
 function FAQ() { const [open, setOpen] = useState(0); return <section id="faq" className="section-space bg-[#0a0d12]"><div className="container-wide max-w-4xl"><div className="text-center"><div className="section-eyebrow">نجيبك بوضوح</div><h2 className="section-title !text-4xl">الأسئلة الشائعة</h2></div><div className="mt-10 divide-y divide-white/[.08] rounded-2xl border border-white/[.08] bg-[#101319] px-5">{faqs.map(([question, answer], index) => <div key={question}><button className="flex w-full items-center justify-between gap-5 py-5 text-right" onClick={() => setOpen(open === index ? -1 : index)}><span className={`font-bold ${open === index ? 'text-[#f4a56d]' : 'text-[#dfdedb]'}`}>{question}</span><ChevronDown size={18} className={`shrink-0 text-[#f0a269] transition-transform ${open === index ? 'rotate-180' : ''}`} /></button>{open === index && <p className="max-w-3xl pb-5 pl-8 text-sm leading-8 text-[#969ba2]">{answer}</p>}</div>)}</div></div></section>; }
 
-function RegisterPage({ agencies, onNavigate, onSubmitted }: { agencies: Agency[]; onNavigate: (view: View) => void; onSubmitted: (registration: Registration) => void }) {
+function RegisterPage({ agencies, mediators, onNavigate, onSubmitted }: { agencies: Agency[]; mediators: Mediator[]; onNavigate: (view: View) => void; onSubmitted: (registration: Registration) => void }) {
   const [role, setRole] = useState<RegisterRole>('host');
   const [country, setCountry] = useState(countries[0]);
   const [form, setForm] = useState({ fullName: '', gender: 'male', phone: '', talent: '', source: 'facebook', referral: '', agency: agencies[0]?.id ?? '' });
@@ -257,11 +257,13 @@ function RegisterPage({ agencies, onNavigate, onSubmitted }: { agencies: Agency[
     event.preventDefault();
     if (!validate()) return;
     setStatus('sending');
+    const referralCode = showReferral ? form.referral.trim() : null;
+    const linkedMediator = referralCode ? mediators.find(m => m.code.toLowerCase() === referralCode.toLowerCase()) ?? null : null;
     if (supabase) {
-      const { error } = await supabase.from('registrations').insert({ full_name: form.fullName.trim(), gender: form.gender, country: country.name, phone_code: country.code, phone_number: form.phone.trim(), role, talent: role === 'host' ? form.talent.trim() : null, discovery_source: form.source, referral_code: showReferral ? form.referral.trim() : null, agency_id: form.agency || null });
+      const { error } = await supabase.from('registrations').insert({ full_name: form.fullName.trim(), gender: form.gender, country: country.name, phone_code: country.code, phone_number: form.phone.trim(), role, talent: role === 'host' ? form.talent.trim() : null, discovery_source: form.source, referral_code: referralCode, agency_id: form.agency || null, mediator_id: linkedMediator?.id ?? null });
       if (error) { console.error('registration submission failed', error); setStatus('error'); return; }
     }
-    onSubmitted({ id: `registration-${Date.now()}`, full_name: form.fullName.trim(), role, country: country.name, gender: form.gender, phone_code: country.code, phone_number: form.phone.trim(), agency_id: form.agency || null, status: 'pending', app_id: null, account_type: 'normal', is_banned: false, created_at: new Date().toISOString(), mediator_id: null, activation_date: null, expiry_date: null, achieved_target: 0 });
+    onSubmitted({ id: `registration-${Date.now()}`, full_name: form.fullName.trim(), role, country: country.name, gender: form.gender, phone_code: country.code, phone_number: form.phone.trim(), agency_id: form.agency || null, status: 'pending', app_id: null, account_type: 'normal', is_banned: false, created_at: new Date().toISOString(), mediator_id: linkedMediator?.id ?? null, activation_date: null, expiry_date: null, achieved_target: 0 });
     setStatus('success');
   };
   if (status === 'success') return <main className="min-h-[700px] bg-[#0b0e13] py-24"><div className="container-wide flex max-w-xl flex-col items-center text-center"><div className="flex h-20 w-20 items-center justify-center rounded-full border border-[#67c7aa]/30 bg-[#67c7aa]/10 text-[#67c7aa]"><Check size={36} /></div><div className="section-eyebrow mt-7">تم استلام طلبك</div><h1 className="section-title mt-3 !text-4xl">أهلاً بك في مجتمع Shadow</h1><p className="mt-5 leading-8 text-[#a6a9ae]">وصلت بياناتك بنجاح. سيتواصل معك فريق خدمة العملاء قريباً لتأكيد الطلب والخطوة التالية.</p><button onClick={() => onNavigate('home')} className="button-primary mt-8">العودة للرئيسية <ArrowRight size={17} /></button></div></main>;
