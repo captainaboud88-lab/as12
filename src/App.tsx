@@ -1,8 +1,5 @@
 import { useEffect, useState, createContext, useContext, type FormEvent } from 'react';
 import { type Lang, t } from './i18n';
-
-const LangCtx = createContext<{ lang: Lang; setLang: (l: Lang) => void }>({ lang: 'ar', setLang: () => {} });
-function useLang() { return useContext(LangCtx); }
 import {
   ArrowLeft, ArrowRight, BarChart3, Check, ChevronDown, Facebook,
   FileCheck2, Headphones, Instagram, LockKeyhole, MessageCircle, Play, Send,
@@ -19,6 +16,9 @@ import type {
   Agency, FeaturedMember, Mediator, Rate, Registration, SocialLink,
   Testimonial, VideoLink, AgencyStaff, View,
 } from '@/types';
+
+const LangCtx = createContext<{ lang: Lang; setLang: (l: Lang) => void }>({ lang: 'ar', setLang: () => {} });
+function useLang() { return useContext(LangCtx); }
 
 type RegisterRole = 'host' | 'supporter' | 'contributor';
 type IconComponent = typeof Users;
