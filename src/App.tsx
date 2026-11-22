@@ -1,4 +1,8 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, createContext, useContext, type FormEvent } from 'react';
+import { type Lang, t } from './i18n';
+
+const LangCtx = createContext<{ lang: Lang; setLang: (l: Lang) => void }>({ lang: 'ar', setLang: () => {} });
+function useLang() { return useContext(LangCtx); }
 import {
   ArrowLeft, ArrowRight, BarChart3, Check, ChevronDown, Facebook,
   FileCheck2, Headphones, Instagram, LockKeyhole, MessageCircle, Play, Send,
@@ -35,6 +39,8 @@ function getHashView(): View {
 function App() {
   const [view, setView] = useState<View>(getHashView());
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [lang, setLang] = useState<Lang>('ar');
+  const [loading, setLoading] = useState(true);
   const [agencies, setAgencies] = useState<Agency[]>(defaultAgencies);
   const [members, setMembers] = useState<FeaturedMember[]>(defaultMembers);
   const [testimonials, setTestimonials] = useState<Testimonial[]>(defaultTestimonials);
@@ -85,7 +91,7 @@ function App() {
         });
       }
     }
-    void loadPublicContent();
+    void loadPublicContent().finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
 
@@ -111,10 +117,11 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if (view === 'error') return <ErrorPage onNavigate={() => go('home')} />;
+  if (view === 'error') return <LangCtx.Provider value={{ lang, setLang }}><ErrorPage onNavigate={() => go('home')} /></LangCtx.Provider>;
 
   return (
-    <div className="page-shell" dir="rtl">
+    <LangCtx.Provider value={{ lang, setLang }}>
+    <div className="page-shell" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <Header view={view} onNavigate={go} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
       {view === 'home' && <HomePage onNavigate={go} agencies={agencies} members={members} testimonials={testimonials} videoLinks={videoLinks} socialLinks={socialLinks} supportWhatsapp={siteSettings.support_whatsapp} supportTelegram={siteSettings.support_telegram} />}
       {view === 'register' && <RegisterPage agencies={agencies} mediators={mediators} onNavigate={go} onSubmitted={(registration) => setRegistrations((current) => [registration, ...current])} />}
@@ -137,28 +144,40 @@ function App() {
       )}
       <Footer onNavigate={go} socialLinks={socialLinks} />
     </div>
+    {loading && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#090b0f]" style={{ animation: 'fadeOut 0.4s 0.8s forwards', opacity: 1 }}>
+        <div className="flex flex-col items-center gap-4">
+          <img src="/0a3e789f-716c-4251-9569-7f98ecab5ee9.jpg" alt="SAC" className="h-16 w-16 rounded-2xl border border-[#8b6a4f] object-cover shadow-2xl" style={{ animation: 'pulse 1s infinite' }} />
+          <div className="h-1 w-32 overflow-hidden rounded-full bg-[#2a2d33]"><div className="h-full w-1/2 rounded-full bg-[#f0a267]" style={{ animation: 'shimmer 1s infinite' }} /></div>
+        </div>
+      </div>
+    )}
+    </LangCtx.Provider>
   );
 }
 
 function Header({ view, onNavigate, mobileOpen, setMobileOpen }: { view: View; onNavigate: (view: View) => void; mobileOpen: boolean; setMobileOpen: (open: boolean) => void }) {
+  const { lang, setLang } = useLang();
+  const navLabels: Record<string, string> = { home: t(lang, 'nav_home'), target: t(lang, 'nav_target'), mediator: t(lang, 'nav_mediator') };
   return (
     <header className="relative z-30 border-b border-white/[.07] bg-[#090b0f]/90 backdrop-blur-xl">
-      <div className="container-wide flex h-[74px] items-center justify-between gap-6">
-        <button className="flex items-center gap-3 text-right" onClick={() => onNavigate('home')} aria-label="الصفحة الرئيسية">
-          <div className="h-11 w-11 overflow-hidden rounded-xl border border-[#8b6a4f] bg-[#17191e] shadow-[0_0_20px_rgba(238,154,89,.1)]"><img src="/0a3e789f-716c-4251-9569-7f98ecab5ee9.jpg" alt="شعار Shadow Agencies Community" className="h-full w-full object-cover" /></div>
+      <div className="container-wide flex h-[74px] items-center justify-between gap-4">
+        <button className="flex items-center gap-3" onClick={() => onNavigate('home')} aria-label="Shadow Agencies Community">
+          <div className="h-11 w-11 overflow-hidden rounded-xl border border-[#8b6a4f] bg-[#17191e] shadow-[0_0_20px_rgba(238,154,89,.1)]"><img src="/0a3e789f-716c-4251-9569-7f98ecab5ee9.jpg" alt="SAC Logo" className="h-full w-full object-cover" /></div>
           <div className="hidden sm:block"><div className="text-[12px] font-black tracking-[.2em] text-[#f0ede8]">SHADOW</div><div className="text-[9px] font-bold tracking-[.24em] text-[#b0764f]">AGENCIES COMMUNITY</div></div>
         </button>
-        <nav className="hidden items-center gap-8 md:flex">
-          {navItems.map((item) => <button key={item.id} onClick={() => onNavigate(item.id)} className={`text-sm font-bold transition-colors ${view === item.id ? 'text-[#f5a468]' : 'text-[#a5a4a4] hover:text-[#f0ede8]'}`}>{item.label}</button>)}
-          <button onClick={() => document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm font-bold text-[#a5a4a4] hover:text-[#f0ede8]">الأسئلة الشائعة</button>
+        <nav className="hidden items-center gap-6 md:flex">
+          {navItems.map((item) => <button key={item.id} onClick={() => onNavigate(item.id)} className={`text-sm font-bold transition-colors ${view === item.id ? 'text-[#f5a468]' : 'text-[#a5a4a4] hover:text-[#f0ede8]'}`}>{navLabels[item.id] ?? item.label}</button>)}
+          <button onClick={() => document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm font-bold text-[#a5a4a4] hover:text-[#f0ede8]">{t(lang, 'nav_faq')}</button>
         </nav>
-        <div className="hidden items-center gap-3 md:flex">
-          <button onClick={() => onNavigate('register')} className="button-primary !rounded-full !px-5 !py-2.5 text-sm">ابدأ رحلتك <ArrowLeft size={16} /></button>
-          <button onClick={() => onNavigate('mediator')} className="button-outline !px-3 !py-2 text-sm">دخول الوسيط</button>
+        <div className="hidden items-center gap-2 md:flex">
+          <button onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')} className="rounded-lg border border-white/10 bg-white/[.03] px-3 py-1.5 text-xs font-bold text-[#c0bbb6] transition hover:border-[#f0a267]/40 hover:text-[#f0a267]">{lang === 'ar' ? 'EN' : 'عر'}</button>
+          <button onClick={() => onNavigate('register')} className="button-primary !rounded-full !px-5 !py-2 text-sm">{t(lang, 'btn_start')} <ArrowLeft size={15} /></button>
+          <button onClick={() => onNavigate('mediator')} className="button-outline !px-3 !py-2 text-sm">{t(lang, 'btn_mediator_login')}</button>
         </div>
-        <button className="rounded-lg border border-white/10 p-2 text-[#f2a26a] md:hidden" onClick={() => setMobileOpen(!mobileOpen)} aria-label="فتح القائمة">{mobileOpen ? <X size={22} /> : <Menu size={22} />}</button>
+        <button className="rounded-lg border border-white/10 p-2 text-[#f2a26a] md:hidden" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Menu">{mobileOpen ? <X size={22} /> : <Menu size={22} />}</button>
       </div>
-      {mobileOpen && <div className="border-t border-white/[.07] bg-[#0d1015] p-4 md:hidden"><div className="flex flex-col gap-2">{navItems.map((item) => <button key={item.id} onClick={() => onNavigate(item.id)} className="rounded-lg px-4 py-3 text-right font-bold text-[#c6c3be] hover:bg-white/5">{item.label}</button>)}<button onClick={() => onNavigate('register')} className="button-primary mt-2">ابدأ رحلتك <ArrowLeft size={16} /></button></div></div>}
+      {mobileOpen && <div className="border-t border-white/[.07] bg-[#0d1015] p-4 md:hidden"><div className="flex flex-col gap-2">{navItems.map((item) => <button key={item.id} onClick={() => onNavigate(item.id)} className="rounded-lg px-4 py-3 text-right font-bold text-[#c6c3be] hover:bg-white/5">{navLabels[item.id] ?? item.label}</button>)}<button onClick={() => onNavigate('register')} className="button-primary mt-2">{t(lang, 'btn_start')} <ArrowLeft size={16} /></button><button onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')} className="mt-2 rounded-lg border border-white/10 py-2 text-sm font-bold text-[#c0bbb6]">{lang === 'ar' ? 'English' : 'العربية'}</button></div></div>}
     </header>
   );
 }
@@ -167,50 +186,51 @@ function HomePage({ onNavigate, agencies, members, testimonials, videoLinks, sup
   onNavigate: (view: View) => void; agencies: Agency[]; members: FeaturedMember[]; testimonials: Testimonial[];
   videoLinks: VideoLink[]; supportWhatsapp: string; supportTelegram: string;
 }) {
+  const { lang } = useLang();
   const servicesWithIcons = services.map((s) => ({ ...s, icon: iconForService(s.number) }));
   return <main>
     <section className="noise relative overflow-hidden border-b border-white/[.05] bg-[#0b0e13]" style={{ backgroundImage: 'url(/pexels-photo-23384400.avif)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundBlendMode: 'overlay' }}>
       <div className="glow-a -left-40 top-24" /><div className="glow-b right-[35%] top-[-150px]" /><div className="grid-overlay absolute inset-0 opacity-60" />
       <div className="container-wide relative grid min-h-[665px] items-center gap-14 py-20 lg:grid-cols-[1fr_390px] lg:gap-16 lg:py-24">
         <div className="reveal max-w-[690px] text-right">
-          <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-[#8e6546] bg-[#1b1716]/80 px-4 py-2 text-xs font-bold text-[#f6b078]"><Sparkles size={14} /> مجتمع صناع المحتوى الصوتي والمرئي <span className="h-2 w-2 rounded-full bg-[#69d3bc] shadow-[0_0_10px_#69d3bc]" /></div>
+          <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-[#8e6546] bg-[#1b1716]/80 px-4 py-2 text-xs font-bold text-[#f6b078]"><Sparkles size={14} /> {t(lang, 'hero_badge')} <span className="h-2 w-2 rounded-full bg-[#69d3bc] shadow-[0_0_10px_#69d3bc]" /></div>
           <h1 className="m-0 text-[clamp(48px,8vw,100px)] font-black leading-[.95] tracking-[-.07em]"><span className="block text-[#ffd08e]">SHADOW</span><span className="block text-[#f1f0ee]">AGENCIES</span><span className="block text-[#df704b]">COMMUNITY</span></h1>
-          <p className="mt-8 max-w-[610px] text-lg leading-[2] text-[#a8a8ab]">أطلق صوتك وابنِ مجتمعك مع أقوى شبكة للوكالات الصوتية. <span className="text-[#d7d1c8]">نمنح الموهبة صوتاً، ونحوّل الشغف إلى تأثير حقيقي.</span></p>
+          <p className="mt-8 max-w-[610px] text-lg leading-[2] text-[#a8a8ab]">{t(lang, 'hero_sub')} <span className="text-[#d7d1c8]">{t(lang, 'hero_sub2')}</span></p>
           <div className="hero-actions mt-8 flex gap-3">
-            <button onClick={() => onNavigate('register')} className="button-primary">ابدأ رحلتك <MessageCircle size={17} /></button>
-            <button onClick={() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })} className="button-outline">اكتشف المجتمع <ArrowLeft size={17} /></button>
+            <button onClick={() => onNavigate('register')} className="button-primary">{t(lang, 'hero_cta')} <MessageCircle size={17} /></button>
+            <button onClick={() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })} className="button-outline">{t(lang, 'hero_explore')} <ArrowLeft size={17} /></button>
           </div>
           {(supportWhatsapp || supportTelegram) && (
             <div className="mt-6 flex gap-3">
-              {supportWhatsapp && <a href={supportWhatsapp} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-2.5 text-sm font-bold text-green-300 transition hover:bg-green-500/20"><MessageCircle size={16} /> تواصل عبر واتساب</a>}
-              {supportTelegram && <a href={supportTelegram} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2.5 text-sm font-bold text-blue-300 transition hover:bg-blue-500/20"><Send size={16} /> تواصل عبر تيليجرام</a>}
+              {supportWhatsapp && <a href={supportWhatsapp} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-2.5 text-sm font-bold text-green-300 transition hover:bg-green-500/20"><MessageCircle size={16} /> {t(lang, 'hero_whatsapp')}</a>}
+              {supportTelegram && <a href={supportTelegram} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2.5 text-sm font-bold text-blue-300 transition hover:bg-blue-500/20"><Send size={16} /> {t(lang, 'hero_telegram')}</a>}
             </div>
           )}
-          <div className="mt-12 grid max-w-[620px] grid-cols-3 border-t border-white/10 pt-7"><Stat value="+6M" label="الزوار الشهري" /><Stat value="+3,252" label="داعم" /><Stat value="+6,019" label="مضيف نشط" /></div>
+          <div className="mt-12 grid max-w-[620px] grid-cols-3 border-t border-white/10 pt-7"><Stat value={t(lang,'stat1_v')} label={t(lang,'stat1_l')} /><Stat value={t(lang,'stat2_v')} label={t(lang,'stat2_l')} /><Stat value={t(lang,'stat3_v')} label={t(lang,'stat3_l')} /></div>
         </div>
         <div className="relative hidden lg:block">
           <div className="absolute -inset-12 rounded-full bg-[#a85435]/10 blur-3xl" />
           <div className="relative rounded-[28px] border border-[#30343e] bg-[#12151b] p-3 shadow-[0_28px_80px_rgba(0,0,0,.38)]">
             <div className="relative flex h-[430px] flex-col justify-between overflow-hidden rounded-[20px] bg-[radial-gradient(circle_at_30%_25%,rgba(184,112,70,.3),transparent_32%),linear-gradient(145deg,#27211e,#0d1117_68%)] p-6">
               <div className="absolute -left-14 top-12 h-72 w-72 rounded-full border-[28px] border-[#bb865c]/35 blur-[1px]" /><div className="absolute left-7 top-20 h-72 w-12 rotate-[28deg] rounded-full bg-gradient-to-r from-[#1c1e24] via-[#8c6349] to-[#1b1c20] opacity-80 shadow-[0_0_28px_rgba(234,155,97,.3)]" />
-              <div className="relative flex items-center justify-between"><span className="text-[10px] font-bold tracking-[.24em] text-[#f2ad77]">SHADOW / 01</span><span className="flex items-center gap-2 text-xs text-[#b5b8bd]"><span className="h-2 w-2 rounded-full bg-[#60c8ad]" /> بث مستمر</span></div>
-              <div className="relative flex items-end justify-between"><div><p className="mb-1 text-xs font-bold text-[#e98b58]">صوتك يصنع الفرق</p><h3 className="m-0 text-2xl font-black text-white">منصة واحدة. مجتمع كامل</h3></div><div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f4a267] text-[#171311]"><Play size={19} fill="currentColor" /></div></div>
+              <div className="relative flex items-center justify-between"><span className="text-[10px] font-bold tracking-[.24em] text-[#f2ad77]">SHADOW / 01</span><span className="flex items-center gap-2 text-xs text-[#b5b8bd]"><span className="h-2 w-2 rounded-full bg-[#60c8ad]" /> {t(lang,'hero_live')}</span></div>
+              <div className="relative flex items-end justify-between"><div><p className="mb-1 text-xs font-bold text-[#e98b58]">{t(lang,'hero_card_badge')}</p><h3 className="m-0 text-2xl font-black text-white">{t(lang,'hero_card_title')}</h3></div><div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f4a267] text-[#171311]"><Play size={19} fill="currentColor" /></div></div>
             </div>
           </div>
-          <div className="float-slow absolute -bottom-8 -right-8 rounded-2xl border border-white/10 bg-[#171a20]/90 px-5 py-4 shadow-2xl"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e27751]/15 text-[#f2a36b]"><Headphones size={19} /></div><div><p className="m-0 text-[10px] text-[#8d929b]">نمو مستمر</p><p className="m-0 text-sm font-bold">+42% هذا الشهر</p></div></div></div>
+          <div className="float-slow absolute -bottom-8 -right-8 rounded-2xl border border-white/10 bg-[#171a20]/90 px-5 py-4 shadow-2xl"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e27751]/15 text-[#f2a36b]"><Headphones size={19} /></div><div><p className="m-0 text-[10px] text-[#8d929b]">{t(lang,'hero_growth_label')}</p><p className="m-0 text-sm font-bold">{t(lang,'hero_growth_value')}</p></div></div></div>
         </div>
       </div>
     </section>
-    <section id="services" className="section-space bg-[#0d1015]"><div className="container-wide"><div className="text-center"><div className="section-eyebrow">لماذا Shadow؟</div><h2 className="section-title">ما الذي نقدمه لك؟</h2><p className="section-copy">مساحتك الآمنة للنمو، التواصل، وتحويل حضورك اليومي إلى مسيرة حقيقية.</p></div><div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{servicesWithIcons.map((service) => <ServiceCard key={service.number} icon={service.icon} number={service.number} title={service.title} detail={service.detail} />)}</div></div></section>
+    <section id="services" className="section-space bg-[#0d1015]"><div className="container-wide"><div className="text-center"><div className="section-eyebrow">{t(lang,'why_eyebrow')}</div><h2 className="section-title">{t(lang,'why_title')}</h2><p className="section-copy">{t(lang,'why_copy')}</p></div><div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{servicesWithIcons.map((service) => <ServiceCard key={service.number} icon={service.icon} number={service.number} title={service.title} detail={service.detail} />)}</div></div></section>
     <StatsStrip />
-    <section className="section-space bg-[#0d1015]"><div className="container-wide"><div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><div className="section-eyebrow">الأشخاص الذين يصنعون الفرق</div><h2 className="section-title !text-4xl">نجوم مجتمعنا</h2></div><p className="max-w-sm text-sm leading-7 text-[#90949b]">أصوات وداعمين ومساهمين يضيفون كل يوم شيئاً جديداً إلى هذه المساحة.</p></div>{members.length > 0 ? <div className="mt-10 grid gap-4 sm:grid-cols-3">{members.map((member) => <MemberCard key={member.id} member={member} />)}</div> : <p className="mt-10 text-center text-sm text-[#858b92]">لا يوجد أعضاء مميزون حالياً.</p>}</div></section>
-    <section className="section-space border-y border-white/[.05] bg-[#0a0d12]"><div className="container-wide"><div className="text-center"><div className="section-eyebrow">شركاء النجاح</div><h2 className="section-title !text-4xl">أقوى الوكالات</h2></div><div className="mt-10 grid gap-4 sm:grid-cols-3">{agencies.map((agency) => <AgencyCard key={agency.id} agency={agency} />)}</div></div></section>
+    <section className="section-space bg-[#0d1015]"><div className="container-wide"><div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><div className="section-eyebrow">{t(lang,'stars_eyebrow')}</div><h2 className="section-title !text-4xl">{t(lang,'stars_title')}</h2></div><p className="max-w-sm text-sm leading-7 text-[#90949b]">{t(lang,'stars_copy')}</p></div>{members.length > 0 ? <div className="mt-10 grid gap-3 sm:grid-cols-4 lg:grid-cols-6">{members.map((member) => <MemberCard key={member.id} member={member} />)}</div> : <p className="mt-10 text-center text-sm text-[#858b92]">{t(lang,'stars_empty')}</p>}</div></section>
+    <section className="section-space border-y border-white/[.05] bg-[#0a0d12]"><div className="container-wide"><div className="text-center"><div className="section-eyebrow">{t(lang,'agencies_eyebrow')}</div><h2 className="section-title !text-4xl">{t(lang,'agencies_title')}</h2></div><div className="mt-10 grid gap-4 sm:grid-cols-3">{agencies.map((agency) => <AgencyCard key={agency.id} agency={agency} />)}</div></div></section>
     {videoLinks.length > 0 && (
-      <section className="section-space bg-[#0d1015]"><div className="container-wide"><div className="text-center"><div className="section-eyebrow">من مجتمعنا</div><h2 className="section-title !text-4xl">الفيديوهات</h2></div><div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{videoLinks.map((v) => <VideoCard key={v.id} video={v} />)}</div></div></section>
+      <section className="section-space bg-[#0d1015]"><div className="container-wide"><div className="text-center"><div className="section-eyebrow">{t(lang,'videos_eyebrow')}</div><h2 className="section-title !text-4xl">{t(lang,'videos_title')}</h2></div><div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{videoLinks.map((v) => <VideoCard key={v.id} video={v} />)}</div></div></section>
     )}
-    <section className="section-space bg-[#0d1015]"><div className="container-wide"><div className="grid gap-10 lg:grid-cols-[.8fr_1.2fr] lg:items-center"><div><div className="section-eyebrow">كلمات من المجتمع</div><h2 className="section-title !text-4xl">نحن نكبر معاً</h2><p className="mt-5 leading-8 text-[#969ba2]">النجاح هنا لا يُقاس بالأرقام فقط، بل بالأثر الذي نتركه في حياة بعضنا.</p></div>{testimonials.length > 0 ? <div className="grid gap-4 sm:grid-cols-3">{testimonials.map((item) => <div key={item.id} className="glass rounded-2xl p-5"><div className="mb-5 flex items-center gap-1 text-[#f4a56c]">{[1,2,3,4,5].map((star) => <Star key={star} size={13} fill="currentColor" />)}</div><p className="min-h-[108px] text-sm leading-7 text-[#c7c6c3]">“{item.message}”</p><div className="mt-5 border-t border-white/10 pt-4"><p className="m-0 text-sm font-bold text-[#f3f0eb]">{item.author_name}</p><p className="m-0 text-xs text-[#8c9198]">{item.role ?? 'عضو في المجتمع'}</p></div></div>)}</div> : <p className="text-sm text-[#858b92]">لا توجد كلمات شكر حالياً.</p>}</div></div></section>
+    <section className=”section-space bg-[#0d1015]”><div className=”container-wide”><div className=”grid gap-10 lg:grid-cols-[.8fr_1.2fr] lg:items-center”><div><div className=”section-eyebrow”>{t(lang,'testimonials_eyebrow')}</div><h2 className=”section-title !text-4xl”>{t(lang,'testimonials_title')}</h2><p className=”mt-5 leading-8 text-[#969ba2]”>{t(lang,'testimonials_copy')}</p></div>{testimonials.length > 0 ? <div className=”grid gap-4 sm:grid-cols-3”>{testimonials.map((item) => <div key={item.id} className=”glass rounded-2xl p-5”><div className=”mb-5 flex items-center gap-1 text-[#f4a56c]”>{[1,2,3,4,5].map((star) => <Star key={star} size={13} fill=”currentColor” />)}</div><p className=”min-h-[108px] text-sm leading-7 text-[#c7c6c3]”>”{item.message}”</p><div className=”mt-5 border-t border-white/10 pt-4”><p className=”m-0 text-sm font-bold text-[#f3f0eb]”>{item.author_name}</p><p className=”m-0 text-xs text-[#8c9198]”>{item.role ?? t(lang,'testimonial_role_default')}</p></div></div>)}</div> : <p className=”text-sm text-[#858b92]”>{t(lang,'testimonials_empty')}</p>}</div></div></section>
     <FAQ />
-    <section className="relative overflow-hidden bg-[#17120f] py-20"><div className="glow-b -left-20 top-0" /><div className="container-wide relative flex flex-col items-center justify-between gap-8 text-center md:flex-row md:text-right"><div><div className="section-eyebrow">خطوتك التالية تبدأ هنا</div><h2 className="mt-3 text-3xl font-black text-[#fff4e8] md:text-4xl">جاهز تطلق صوتك؟</h2><p className="mt-3 text-[#b6a89e]">انضم إلى مجتمع يقدّر حضورك ويؤمن بإمكانياتك.</p></div><button onClick={() => onNavigate('register')} className="button-primary !px-8">سجّل الآن <ArrowLeft size={18} /></button></div></section>
+    <section className="relative overflow-hidden bg-[#17120f] py-20"><div className="glow-b -left-20 top-0" /><div className="container-wide relative flex flex-col items-center justify-between gap-8 text-center md:flex-row md:text-right"><div><div className="section-eyebrow">{t(lang,'cta_eyebrow')}</div><h2 className="mt-3 text-3xl font-black text-[#fff4e8] md:text-4xl">{t(lang,'cta_title')}</h2><p className="mt-3 text-[#b6a89e]">{t(lang,'cta_sub')}</p></div><button onClick={() => onNavigate('register')} className="button-primary !px-8">{t(lang,'cta_btn')} <ArrowLeft size={18} /></button></div></section>
   </main>;
 }
 
@@ -221,9 +241,26 @@ function iconForService(number: string): IconComponent {
 
 function Stat({ value, label }: { value: string; label: string }) { return <div className="text-center"><div className="text-3xl font-black text-[#f4a56b]">{value}</div><div className="mt-1 text-xs text-[#8b8d92]">{label}</div></div>; }
 function ServiceCard({ icon: Icon, title, detail, number }: { icon: IconComponent; title: string; detail: string; number: string }) { return <div className="flip-card" tabIndex={0}><div className="flip-card-inner"><div className="flip-face"><div className="flex items-start justify-between"><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#f2a167]/10 text-[#f2a167]"><Icon size={22} /></div><span className="font-mono text-sm text-[#5e626a]">{number}</span></div><div><h3 className="m-0 text-xl font-extrabold text-[#f1efeb]">{title}</h3><p className="mt-2 text-xs text-[#7f858d]">مرّر لمعرفة المزيد</p></div></div><div className="flip-face flip-back"><span className="text-sm font-black text-[#f4ad73]">{number} / Shadow approach</span><p className="my-auto text-base leading-8 text-[#f1e4d8]">{detail}</p><span className="text-xs text-[#ae9280]">نصنع المساحة. ونرافقك في الطريق.</span></div></div></div>; }
-function StatsStrip() { return <section className="border-y border-white/[.06] bg-[#11141a] py-9"><div className="container-wide grid grid-cols-2 gap-8 md:grid-cols-4"><Stat value="+12" label="وكالة شريكة" /><Stat value="+18K" label="عضو في الشبكة" /><Stat value="24/7" label="دعم ومتابعة" /><Stat value="98%" label="رضا المجتمع" /></div></section>; }
-function MemberCard({ member }: { member: FeaturedMember }) { const role = member.role === 'host' ? 'مضيف' : member.role === 'supporter' ? 'داعم' : 'مساهم'; return <div className="group relative overflow-hidden rounded-2xl border border-white/[.08] bg-[#171a20] p-3 transition hover:-translate-y-1 hover:border-[#9f6a49]"><div className="flex h-56 items-end overflow-hidden rounded-xl bg-[radial-gradient(circle_at_45%_20%,#6c4939,#24262d_55%,#13151a)] p-4"><div className="h-28 w-28 translate-x-2 translate-y-12 rounded-full border-[10px] border-[#dfa273]/25 bg-[#20232a] opacity-80 transition group-hover:scale-110" /><div className="absolute right-5 top-5 rounded-full border border-white/10 bg-black/20 px-3 py-1 text-[10px] text-[#e6b68f]">{role}</div><div className="relative z-10 mr-auto h-20 w-20 rounded-full border-4 border-[#1b1d22] bg-[#d99062]/60 shadow-xl" /></div><div className="flex items-center justify-between px-2 pb-2 pt-4"><div><h3 className="m-0 text-sm font-bold text-[#f1efec]">{member.name}</h3><p className="m-0 mt-1 text-xs text-[#858a91]">{role} في المجتمع</p></div><ArrowLeft size={17} className="text-[#d98b5b] transition group-hover:-translate-x-1" /></div></div>; }
-function AgencyCard({ agency }: { agency: Agency }) { return <div className="group flex items-center gap-4 rounded-2xl border border-white/[.08] bg-[#14171c] p-5 transition hover:border-[#9f6a49] hover:bg-[#191b20]"><div className="flex h-14 w-14 items-center justify-center rounded-xl border border-[#8e674d] bg-[#2b211c] text-lg font-black text-[#eea36d]">{agency.name.slice(0, 1)}</div><div className="min-w-0 flex-1"><h3 className="m-0 truncate font-bold text-[#efeeec]">{agency.name}</h3><p className="m-0 mt-1 text-xs text-[#858a91]">{agency.member_count} عضو نشط</p></div><span className="text-xs font-mono text-[#6c727b]">{agency.app_account_code}</span></div>; }
+function StatsStrip() { const { lang } = useLang(); return <section className="border-y border-white/[.06] bg-[#11141a] py-9"><div className="container-wide grid grid-cols-2 gap-8 md:grid-cols-4"><Stat value="+12" label={t(lang,'stats_agencies')} /><Stat value="+18K" label={t(lang,'stats_members')} /><Stat value="24/7" label={t(lang,'stats_support')} /><Stat value="98%" label={t(lang,'stats_satisfaction')} /></div></section>; }
+function MemberCard({ member }: { member: FeaturedMember }) {
+  const { lang } = useLang();
+  const roleKey = member.role === 'host' ? 'role_host' : member.role === 'supporter' ? 'role_supporter' : 'role_contributor';
+  const roleLabel = t(lang, roleKey);
+  const roleColors: Record<string, string> = { host: 'bg-[#f4a56b]/10 text-[#f4a56b] border-[#f4a56b]/20', supporter: 'bg-blue-500/10 text-blue-300 border-blue-500/20', contributor: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' };
+  return <div className="group flex flex-col items-center gap-3 rounded-2xl border border-white/[.07] bg-[#13161b] p-4 text-center transition hover:-translate-y-1 hover:border-[#9f6a49] hover:bg-[#17191f]">
+    <div className="relative flex h-14 w-14 items-center justify-center rounded-full border-2 border-[#8b6a4f]/40 bg-[radial-gradient(circle_at_40%_30%,#6c4939,#1e2128)] shadow-lg transition group-hover:scale-105">
+      <span className="text-lg font-black text-[#f4a56b]">{member.name.slice(0,1)}</span>
+      <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#60c8ad] shadow">
+        <span className="h-1.5 w-1.5 rounded-full bg-white" />
+      </span>
+    </div>
+    <div>
+      <h3 className="m-0 text-sm font-bold text-[#f1efec]">{member.name}</h3>
+      <span className={`mt-1.5 inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold ${roleColors[member.role]}`}>{roleLabel}</span>
+    </div>
+  </div>;
+}
+function AgencyCard({ agency }: { agency: Agency }) { const { lang } = useLang(); return <div className="group flex items-center gap-4 rounded-2xl border border-white/[.08] bg-[#14171c] p-5 transition hover:border-[#9f6a49] hover:bg-[#191b20] hover:shadow-[0_4px_24px_rgba(238,163,109,.08)]"><div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-[#8e674d] bg-gradient-to-br from-[#3a2419] to-[#1e1a14] text-lg font-black text-[#eea36d] shadow-inner">{agency.name.slice(0, 1)}</div><div className="min-w-0 flex-1"><h3 className="m-0 truncate font-bold text-[#efeeec]">{agency.name}</h3><p className="m-0 mt-1 text-xs text-[#858a91]">{agency.member_count} {t(lang,'agency_members')}</p></div><span className="shrink-0 rounded-lg border border-white/[.06] bg-white/[.03] px-2 py-1 text-[10px] font-mono text-[#6c727b]">{agency.app_account_code}</span></div>; }
 function VideoCard({ video }: { video: VideoLink }) {
   const isYoutube = video.url.includes('youtube.com') || video.url.includes('youtu.be');
   const embedUrl = isYoutube
@@ -232,7 +269,7 @@ function VideoCard({ video }: { video: VideoLink }) {
   return <div className="overflow-hidden rounded-2xl border border-white/[.08] bg-[#14171c]"><div className="aspect-video w-full">{isYoutube ? <iframe src={embedUrl} title={video.title} className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /> : <a href={video.url} target="_blank" rel="noopener noreferrer" className="flex h-full w-full items-center justify-center gap-2 text-sm font-bold text-[#f4a56b] hover:text-[#f6b078]"><Play size={20} /> {video.title}</a>}</div><div className="p-4"><h3 className="m-0 text-sm font-bold text-[#efeeec]">{video.title}</h3></div></div>;
 }
 
-function FAQ() { const [open, setOpen] = useState(0); return <section id="faq" className="section-space bg-[#0a0d12]"><div className="container-wide max-w-4xl"><div className="text-center"><div className="section-eyebrow">نجيبك بوضوح</div><h2 className="section-title !text-4xl">الأسئلة الشائعة</h2></div><div className="mt-10 divide-y divide-white/[.08] rounded-2xl border border-white/[.08] bg-[#101319] px-5">{faqs.map(([question, answer], index) => <div key={question}><button className="flex w-full items-center justify-between gap-5 py-5 text-right" onClick={() => setOpen(open === index ? -1 : index)}><span className={`font-bold ${open === index ? 'text-[#f4a56d]' : 'text-[#dfdedb]'}`}>{question}</span><ChevronDown size={18} className={`shrink-0 text-[#f0a269] transition-transform ${open === index ? 'rotate-180' : ''}`} /></button>{open === index && <p className="max-w-3xl pb-5 pl-8 text-sm leading-8 text-[#969ba2]">{answer}</p>}</div>)}</div></div></section>; }
+function FAQ() { const { lang } = useLang(); const [open, setOpen] = useState(0); return <section id="faq" className="section-space bg-[#0a0d12]"><div className="container-wide max-w-4xl"><div className="text-center"><div className="section-eyebrow">{t(lang,'faq_eyebrow')}</div><h2 className="section-title !text-4xl">{t(lang,'faq_title')}</h2></div><div className="mt-10 divide-y divide-white/[.08] rounded-2xl border border-white/[.08] bg-[#101319] px-5">{faqs.map(([question, answer], index) => <div key={question}><button className="flex w-full items-center justify-between gap-5 py-5 text-right" onClick={() => setOpen(open === index ? -1 : index)}><span className={`font-bold ${open === index ? 'text-[#f4a56d]' : 'text-[#dfdedb]'}`}>{question}</span><ChevronDown size={18} className={`shrink-0 text-[#f0a269] transition-transform ${open === index ? 'rotate-180' : ''}`} /></button>{open === index && <p className="max-w-3xl pb-5 pl-8 text-sm leading-8 text-[#969ba2]">{answer}</p>}</div>)}</div></div></section>; }
 
 function RegisterPage({ agencies, mediators, onNavigate, onSubmitted }: { agencies: Agency[]; mediators: Mediator[]; onNavigate: (view: View) => void; onSubmitted: (registration: Registration) => void }) {
   const [role, setRole] = useState<RegisterRole>('host');
@@ -342,6 +379,7 @@ function MediatorDashboard({ mediator, agencies, registrations, onLogout }: {
 function DashboardStat({ icon: Icon, label, value }: { icon: IconComponent; label: string; value: string }) { return <div className="rounded-2xl border border-white/[.08] bg-[#11141a] p-5"><div className="flex items-center justify-between"><span className="text-xs text-[#858b92]">{label}</span><Icon size={18} className="text-[#ec9e65]" /></div><div className="mt-5 text-3xl font-black text-[#f1ede7]">{value}</div></div>; }
 
 function Footer({ onNavigate, socialLinks }: { onNavigate: (view: View) => void; socialLinks: SocialLink[] }) {
+  const { lang } = useLang();
   const findLink = (platform: string) => socialLinks.find(s => s.platform === platform)?.url;
   return <footer className="border-t border-white/[.08] bg-[#090b0f] py-12"><div className="container-wide"><div className="flex flex-col justify-between gap-10 md:flex-row"><div><button onClick={() => onNavigate('home')} className="flex items-center gap-3"><div className="h-10 w-10 overflow-hidden rounded-xl border border-[#76573e] bg-[#2c211b]"><img src="/0a3e789f-716c-4251-9569-7f98ecab5ee9.jpg" alt="شعار Shadow Agencies Community" className="h-full w-full object-cover" /></div><div className="text-right"><div className="text-[11px] font-black tracking-[.2em]">SHADOW</div><div className="text-[8px] font-bold tracking-[.2em] text-[#a26b48]">AGENCIES COMMUNITY</div></div></button><p className="mt-5 max-w-xs text-sm leading-7 text-[#81868d]">أطلق صوتك، ابنِ مجتمعك، وكن جزءاً من شبكة تؤمن بما تستطيع أن تصنعه.</p></div><div className="flex flex-wrap gap-10"><div><p className="mb-4 text-xs font-bold text-[#f0ece6]">استكشف</p><button onClick={() => onNavigate('home')} className="block py-1 text-sm text-[#81868d] hover:text-[#eea269]">الرئيسية</button><button onClick={() => onNavigate('target')} className="block py-1 text-sm text-[#81868d] hover:text-[#eea269]">احسب تارجتك</button><button onClick={() => onNavigate('mediator')} className="block py-1 text-sm text-[#81868d] hover:text-[#eea269]">دخول الوسيط</button></div><div><p className="mb-4 text-xs font-bold text-[#f0ece6]">تابعنا</p><div className="flex gap-2">{findLink('facebook') && <a href={findLink('facebook')} target="_blank" rel="noopener noreferrer" className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-[#aeb1b5] hover:border-[#eea269] hover:text-[#eea269]" aria-label="فيسبوك"><Facebook size={16} /></a>}{findLink('youtube') && <a href={findLink('youtube')} target="_blank" rel="noopener noreferrer" className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-[#aeb1b5] hover:border-[#eea269] hover:text-[#eea269]" aria-label="يوتيوب"><Youtube size={16} /></a>}{findLink('instagram') && <a href={findLink('instagram')} target="_blank" rel="noopener noreferrer" className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-[#aeb1b5] hover:border-[#eea269] hover:text-[#eea269]" aria-label="إنستغرام"><Instagram size={16} /></a>}</div></div></div></div><div className="mt-10 flex flex-col justify-between gap-3 border-t border-white/[.07] pt-5 text-xs text-[#656b73] sm:flex-row"><span>© 2026 Shadow Agencies Community</span><span className="flex items-center gap-2"><ShieldCheck size={14} className="text-[#69c6aa]" />خصوصيتك وأمانك أولويتنا</span></div></div></footer>;
 }
