@@ -1,7 +1,7 @@
 export type Lang = 'ar' | 'en';
 
 const ar = {
-  dir: 'rtl' as const,
+  dir: 'rtl' as 'rtl' | 'ltr',
   nav_home: 'الرئيسية',
   nav_target: 'احسب تارجتك',
   nav_mediator: 'دخول الوسيط',
@@ -184,7 +184,7 @@ const ar = {
 };
 
 const en: typeof ar = {
-  dir: 'ltr' as const,
+  dir: 'ltr' as 'rtl' | 'ltr',
   nav_home: 'Home',
   nav_target: 'Target Calculator',
   nav_mediator: 'Mediator Login',
