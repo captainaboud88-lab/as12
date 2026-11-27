@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS mediators_agency_id_idx ON public.mediators (agency_id);
